@@ -57,6 +57,10 @@
 
 #define FEAT_PEN_IRQ	(1 << 0)	/* HAS ADCCLRINTPNDNUP */
 
+/* bits from the ADCUPDN register */
+#define TSC_UP (1 << 1)
+#define TSC_DN (1 << 0)
+
 /* Per-touchscreen data. */
 
 /**
@@ -85,36 +89,21 @@ struct s3c2410ts {
 	int count;
 	int shift;
 	int features;
+	bool pen_is_down;
 };
 
 static struct s3c2410ts ts;
 
-/**
- * get_down - return the down state of the pen
- * @data0: The data read from ADCDAT0 register.
- * @data1: The data read from ADCDAT1 register.
- *
- * Return non-zero if both readings show that the pen is down.
- */
-static inline bool get_down(unsigned long data0, unsigned long data1)
+/* signal an interrupt when the pen hits the touch */
+static void waiting_for_pen_down(struct s3c2410ts *ts)
 {
-	/* returns true if both data values show stylus down */
-	return (!(data0 & S3C2410_ADCDAT0_UPDOWN) &&
-		!(data1 & S3C2410_ADCDAT0_UPDOWN));
+	writel(WAIT4INT | INT_DOWN, ts->io + S3C2410_ADCTSC);
+	ts->pen_is_down = false;
 }
 
 static void touch_timer_fire(unsigned long data)
 {
-	unsigned long data0;
-	unsigned long data1;
-	bool down;
-
-	data0 = readl(ts.io + S3C2410_ADCDAT0);
-	data1 = readl(ts.io + S3C2410_ADCDAT1);
-
-	down = get_down(data0, data1);
-
-	if (down) {
+	if (ts.pen_is_down) {
 		if (ts.count == (1 << ts.shift)) {
 			ts.xp >>= ts.shift;
 			ts.yp >>= ts.shift;
@@ -124,7 +113,6 @@ static void touch_timer_fire(unsigned long data)
 
 			input_report_abs(ts.input, ABS_X, ts.xp);
 			input_report_abs(ts.input, ABS_Y, ts.yp);
-
 			input_report_key(ts.input, BTN_TOUCH, 1);
 			input_sync(ts.input);
 
@@ -132,7 +120,7 @@ static void touch_timer_fire(unsigned long data)
 			ts.yp = 0;
 			ts.count = 0;
 		}
-
+		/* as long as the pen is down, trigger the next conversion */
 		s3c_adc_start(ts.client, 0, 1 << ts.shift);
 	} else {
 		ts.xp = 0;
@@ -154,30 +142,31 @@ static DEFINE_TIMER(touch_timer, touch_timer_fire, 0, 0);
  * @dev_id: The device ID.
  *
  * Called when the IRQ_TC is fired for a pen up or down event.
+ *
+ * Do not change the pen detection interrupt setting here. An ADC conversion
+ * may still is ongoing.
  */
 static irqreturn_t stylus_irq(int irq, void *dev_id)
 {
-	unsigned long data0;
-	unsigned long data1;
-	bool down;
+	u32 reg;
 
-	data0 = readl(ts.io + S3C2410_ADCDAT0);
-	data1 = readl(ts.io + S3C2410_ADCDAT1);
+	reg = readl(ts.io + S3C64XX_ADCUPDN);
+	writel(0x0, ts.io + S3C64XX_ADCUPDN);	/* just clear the status */
 
-	down = get_down(data0, data1);
-
-	/* TODO we should never get an interrupt with down set while
-	 * the timer is running, but maybe we ought to verify that the
-	 * timer isn't running anyways. */
-
-	if (down)
-		s3c_adc_start(ts.client, 0, 1 << ts.shift);
-	else
-		dev_dbg(ts.dev, "%s: count=%d\n", __func__, ts.count);
-
-	if (ts.features & FEAT_PEN_IRQ) {
-		/* Clear pen down/up interrupt */
-		writel(0x0, ts.io + S3C64XX_ADCCLRINTPNDNUP);
+	if (reg & TSC_DN) {
+		if (!ts.pen_is_down) {
+			/* Waiting for pen-up is done after the conversion */
+			ts.pen_is_down = true;
+			s3c_adc_start(ts.client, 0, 1 << ts.shift);
+			dev_dbg(ts.dev, "%s: Start\n", __func__);
+		} else
+			dev_dbg(ts.dev, "%s: Ignoring pen down bounce\n", __func__);
+	} else {
+		if (reg & TSC_UP) {
+			dev_dbg(ts.dev, "%s: Stop\n", __func__);
+			ts.pen_is_down = false;
+		} else
+			dev_dbg(ts.dev, "%s: Unknown reason\n", __func__);
 	}
 
 	return IRQ_HANDLED;
@@ -223,11 +212,19 @@ static void s3c24xx_ts_conversion(struct s3c_adc_client *client,
 static void s3c24xx_ts_select(struct s3c_adc_client *client, unsigned select)
 {
 	if (select) {
+		/* do a full X/Y conversion */
 		writel(S3C2410_ADCTSC_PULL_UP_DISABLE | AUTOPST,
 		       ts.io + S3C2410_ADCTSC);
 	} else {
-		mod_timer(&touch_timer, jiffies+1);
+		/*
+		 * Switch back to pen up detection
+		 */
 		writel(WAIT4INT | INT_UP, ts.io + S3C2410_ADCTSC);
+		/*
+		 * After each conversion do a small pause to give the
+		 * pen up detection a chance to happen.
+		 */
+		mod_timer(&touch_timer, jiffies + 1);
 	}
 }
 
@@ -304,8 +301,6 @@ static int __devinit s3c2410ts_probe(struct platform_device *pdev)
 	if ((info->delay & 0xffff) > 0)
 		writel(info->delay & 0xffff, ts.io + S3C2410_ADCDLY);
 
-	writel(WAIT4INT | INT_DOWN, ts.io + S3C2410_ADCTSC);
-
 	input_dev = input_allocate_device();
 	if (!input_dev) {
 		dev_err(dev, "Unable to allocate the input device !!\n");
@@ -334,6 +329,8 @@ static int __devinit s3c2410ts_probe(struct platform_device *pdev)
 		dev_err(dev, "cannot get TC interrupt\n");
 		goto err_inputdev;
 	}
+
+	waiting_for_pen_down(&ts);
 
 	dev_info(dev, "driver attached, registering input device\n");
 
@@ -401,7 +398,7 @@ static int s3c2410ts_resume(struct device *dev)
 	if ((info->delay & 0xffff) > 0)
 		writel(info->delay & 0xffff, ts.io + S3C2410_ADCDLY);
 
-	writel(WAIT4INT | INT_DOWN, ts.io + S3C2410_ADCTSC);
+	waiting_for_pen_down(&ts);
 
 	return 0;
 }
