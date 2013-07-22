@@ -48,6 +48,7 @@
 #include <linux/platform_data/mmc-s3cmci.h>
 #include <linux/platform_data/usb-s3c2410_udc.h>
 #include <linux/platform_data/touchscreen-s3c2410.h>
+#include <linux/platform_data/hwmon-s3c.h>
 
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
@@ -535,6 +536,53 @@ static struct s3c2410_ts_mach_info mini2440_ts_cfg __initdata = {
 	.oversampling_shift = 0,
 };
 
+static struct s3c_hwmon_chcfg mini2440_adc_chcfg[8] = {
+	{
+		.name = "AIN0",	/* connected to CON4/5 and W1 */
+		.mult = 3300,
+		.div = 1023,
+	}, {
+		.name = "AIN1",	/* connected to CON4/6 */
+		.mult = 3300,
+		.div = 1023,
+	}, {
+		.name = "AIN2",	/* connected to CON4/7 */
+		.mult = 3300,
+		.div = 1023,
+	}, {
+		.name = "AIN3",	/* connected to CON4/8 */
+		.mult = 3300,
+		.div = 1023,
+	}, {
+		.name = "TSYM",
+		.mult = 3300,
+		.div = 1023,
+	}, {
+		.name = "TSYP",
+		.mult = 3300,
+		.div = 1023,
+	}, {
+		.name = "TSXM",
+		.mult = 3300,
+		.div = 1023,
+	}, {
+		.name = "TSXP",
+		.mult = 3300,
+		.div = 1023,
+	},
+};
+
+static struct s3c_hwmon_pdata mini2440_adc __initdata = {
+	.in[0] = &mini2440_adc_chcfg[0],
+	.in[1] = &mini2440_adc_chcfg[1],
+	.in[2] = &mini2440_adc_chcfg[2],
+	.in[3] = &mini2440_adc_chcfg[3],
+	.in[4] = &mini2440_adc_chcfg[4],
+	.in[5] = &mini2440_adc_chcfg[5],
+	.in[6] = &mini2440_adc_chcfg[6],
+	.in[7] = &mini2440_adc_chcfg[7],
+};
+
 static struct platform_device *mini2440_devices[] __initdata = {
 	&s3c_device_ohci,
 	&s3c_device_wdt,
@@ -551,6 +599,7 @@ static struct platform_device *mini2440_devices[] __initdata = {
 	&mini2440_audio,
 	&samsung_asoc_dma,
 	&s3c_device_adc,
+	&s3c_device_hwmon,
 };
 
 static void __init mini2440_map_io(void)
@@ -708,6 +757,7 @@ static void __init mini2440_init(void)
 	s3c_nand_set_platdata(&mini2440_nand_info);
 	s3c_i2c0_set_platdata(NULL);
 	s3c24xx_ts_set_platdata(&mini2440_ts_cfg);
+	s3c_hwmon_set_platdata(&mini2440_adc);
 
 	i2c_register_board_info(0, mini2440_i2c_devs,
 				ARRAY_SIZE(mini2440_i2c_devs));
