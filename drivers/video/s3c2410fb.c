@@ -157,8 +157,8 @@ static int s3c2410fb_check_var(struct fb_var_screeninfo *var,
 	/* it is always the size as the display */
 	var->xres_virtual = display->xres;
 	var->yres_virtual = display->yres;
-	var->height = display->height;
-	var->width = display->width;
+	var->height = display->phys_height;
+	var->width = display->phys_width;
 
 	/* copy lcd settings */
 	var->pixclock = display->pixclock;

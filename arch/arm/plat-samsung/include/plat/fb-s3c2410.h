@@ -33,6 +33,8 @@ struct s3c2410fb_display {
 	unsigned short xres;
 	unsigned short yres;
 	unsigned short bpp;
+	unsigned int phys_width; /* visible width in [mm] */
+	unsigned int phys_height; /* visible height in [mm] */
 
 	unsigned pixclock;		/* pixclock in picoseconds */
 	unsigned short left_margin;  /* value in pixels (TFT) or HCLKs (STN) */
