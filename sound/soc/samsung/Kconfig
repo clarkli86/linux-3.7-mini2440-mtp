@@ -2,7 +2,7 @@ config SND_SOC_SAMSUNG
 	tristate "ASoC support for Samsung"
 	depends on PLAT_SAMSUNG
 	select S3C64XX_DMA if ARCH_S3C64XX
-	select S3C2410_DMA if ARCH_S3C24XX
+	select S3C24XX_DMA if ARCH_S3C24XX
 	help
 	  Say Y or M if you want to add support for codecs attached to
 	  the Samsung SoCs' Audio interfaces. You will also need to
@@ -10,7 +10,7 @@ config SND_SOC_SAMSUNG
 
 config SND_S3C24XX_I2S
 	tristate
-	select S3C2410_DMA
+	select S3C24XX_DMA
 
 config SND_S3C_I2SV2_SOC
 	tristate
@@ -18,7 +18,7 @@ config SND_S3C_I2SV2_SOC
 config SND_S3C2412_SOC_I2S
 	tristate
 	select SND_S3C_I2SV2_SOC
-	select S3C2410_DMA
+	select S3C24XX_DMA
 
 config SND_SAMSUNG_PCM
 	tristate
@@ -74,7 +74,7 @@ config SND_SOC_SAMSUNG_SMDK_WM8994
 config SND_SOC_SAMSUNG_SMDK2443_WM9710
 	tristate "SoC AC97 Audio support for SMDK2443 - WM9710"
 	depends on SND_SOC_SAMSUNG && MACH_SMDK2443
-	select S3C2410_DMA
+	select S3C24XX_DMA
 	select AC97_BUS
 	select SND_SOC_AC97_CODEC
 	select SND_SAMSUNG_AC97
@@ -85,7 +85,7 @@ config SND_SOC_SAMSUNG_SMDK2443_WM9710
 config SND_SOC_SAMSUNG_LN2440SBC_ALC650
 	tristate "SoC AC97 Audio support for LN2440SBC - ALC650"
 	depends on SND_SOC_SAMSUNG && ARCH_S3C24XX
-	select S3C2410_DMA
+	select S3C24XX_DMA
 	select AC97_BUS
 	select SND_SOC_AC97_CODEC
 	select SND_SAMSUNG_AC97
