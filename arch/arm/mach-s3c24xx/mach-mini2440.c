@@ -425,16 +425,12 @@ static struct gpio_keys_button mini2440_buttons[] = {
 		.desc		= "Button 5",
 		.active_low	= 1,
 	},
-#if 0
-	/* this pin is also known as TCLK1 and seems to already
-	 * marked as "in use" somehow in the kernel -- possibly wrongly */
 	{
-		.gpio		= S3C2410_GPG(11),	/* K6 */
+		.gpio		= S3C2410_GPG(11),		/* K6 */
 		.code		= KEY_F6,
 		.desc		= "Button 6",
 		.active_low	= 1,
 	},
-#endif
 };
 
 static struct gpio_keys_platform_data mini2440_button_data = {
