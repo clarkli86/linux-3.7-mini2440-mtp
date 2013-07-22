@@ -1529,8 +1529,8 @@ composite_resume(struct usb_gadget *gadget)
 
 /*-------------------------------------------------------------------------*/
 
-static const struct usb_gadget_driver composite_driver_template = {
-	.bind		= composite_bind,
+static struct usb_gadget_driver composite_driver_template = {
+	//.bind		= composite_bind,
 	.unbind		= composite_unbind,
 
 	.setup		= composite_setup,

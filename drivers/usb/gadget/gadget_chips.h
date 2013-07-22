@@ -33,6 +33,22 @@
 #define gadget_is_net2280(g)		(!strcmp("net2280", (g)->name))
 #define gadget_is_pxa(g)		(!strcmp("pxa25x_udc", (g)->name))
 #define gadget_is_pxa27x(g)		(!strcmp("pxa27x_udc", (g)->name))
+#define gadget_is_s3c2410(g)		(!strcmp("s3c2410_udc", (g)->name))
+
+static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
+{
+	if (gadget_is_pxa(gadget))
+		return 0x03;
+	else if (gadget_is_goku(gadget))
+		return 0x06;
+	else if (gadget_is_pxa27x(gadget))
+		return 0x11;
+	else if (gadget_is_s3c2410(gadget))
+		return 0x12;
+	else if (gadget_is_at91(gadget))
+		return 0x13;
+    return -ENOENT;
+}
 
 /**
  * gadget_supports_altsettings - return true if altsettings work
