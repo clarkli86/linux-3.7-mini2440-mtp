@@ -299,7 +299,8 @@ static irqreturn_t s3c_adc_irq(int irq, void *pw)
 	data1 = readl(adc->regs + S3C2410_ADCDAT1);
 	adc_dbg(adc, "read %d: 0x%04x, 0x%04x\n", client->nr_samples, data0, data1);
 
-	client->nr_samples--;
+	if (client->nr_samples > 0)
+		client->nr_samples--;
 
 	if (cpu == TYPE_ADCV1 || cpu == TYPE_ADCV11) {
 		data0 &= 0x3ff;
