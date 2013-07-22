@@ -112,7 +112,7 @@ static struct s3c2410_udc_mach_info mini2440_udc_cfg __initdata = {
  * This macro simplifies the table bellow
  */
 #define _LCD_DECLARE(_clock,_xres,margin_left,margin_right,hsync, \
-			_yres,margin_top,margin_bottom,vsync, refresh) \
+			_yres,margin_top,margin_bottom,vsync, refresh, vwidth, vheight) \
 	.width = _xres, \
 	.xres = _xres, \
 	.height = _yres, \
@@ -123,6 +123,8 @@ static struct s3c2410_udc_mach_info mini2440_udc_cfg __initdata = {
 	.lower_margin	= margin_bottom,	\
 	.hsync_len	= hsync,	\
 	.vsync_len	= vsync,	\
+	.phys_width	= vwidth,	\
+	.phys_height	= vheight,	\
 	.pixclock	= ((_clock*100000000000LL) /	\
 			   ((refresh) * \
 			   (hsync + margin_left + _xres + margin_right) * \
@@ -132,24 +134,26 @@ static struct s3c2410_udc_mach_info mini2440_udc_cfg __initdata = {
 			   S3C2410_LCDCON1_TFT)
 
 static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
-	[0] = {	/* mini2440 + 3.5" TFT + touchscreen */
+	[0] = {	/* mini2440 + 3.5" TFT + touchscreen (NEC NL2432HC22-23B: N35) */
 		_LCD_DECLARE(
 			7,			/* The 3.5 is quite fast */
 			240, 21, 38, 6, 	/* x timing */
 			320, 4, 4, 2,		/* y timing */
-			60),			/* refresh rate */
+			60,			/* refresh rate */
+			55, 71),		/* physical size */
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 				   S3C2410_LCDCON5_INVVLINE |
 				   S3C2410_LCDCON5_INVVFRAME |
 				   S3C2410_LCDCON5_INVVDEN |
 				   S3C2410_LCDCON5_PWREN),
 	},
-	[1] = { /* mini2440 + 7" TFT + touchscreen */
+	[1] = { /* mini2440 + 7" TFT + touchscreen (Innolux AT070TN83: N43/LCD70) */
 		_LCD_DECLARE(
 			10,			/* the 7" runs slower */
 			800, 40, 40, 48, 	/* x timing */
 			480, 29, 3, 3,		/* y timing */
-			50),			/* refresh rate */
+			50,			/* refresh rate */
+			153, 92),		/* physical size */
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 				   S3C2410_LCDCON5_INVVLINE |
 				   S3C2410_LCDCON5_INVVFRAME |
@@ -166,17 +170,19 @@ static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
 			10,
 			1024, 1, 2, 2,		/* y timing */
 			768, 200, 16, 16, 	/* x timing */
-			24),	/* refresh rate, maximum stable,
+			24,	/* refresh rate, maximum stable,
 				 tested with the FPGA shield */
+			0, 0),	/* Size unknown */
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 				   S3C2410_LCDCON5_HWSWP),
 	},
-	[3] = {	/* mini2440 + 3.5" TFT + TS -- New model as Nov 2009 "T35" */
+	[3] = {	/* mini2440 + 3.5" TFT + TS -- New model as Nov 2009 -- TD035STED4: T35 */
 		_LCD_DECLARE(
 			7,			/* The 3.5 is quite fast */
 			240, 21, 25, 6,		/* x timing */
 			320, 2, 4, 2,		/* y timing */
-			40),			/* refresh rate */
+			40,			/* refresh rate */
+			53, 71),		/* pyhsical size */
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 				   S3C2410_LCDCON5_INVVLINE |
 				   S3C2410_LCDCON5_INVVFRAME |
@@ -189,18 +195,20 @@ static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
 			10,			/* the 5.3" runs slower */
 			640, 41, 68, 22,	/* x timing */
 			480, 26, 6, 2,		/* y timing */
-			40),			/* refresh rate */
+			40,			/* refresh rate */
+			113, 85),		/* pyhsical size */
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 				   S3C2410_LCDCON5_INVVLINE |
 				   S3C2410_LCDCON5_INVVFRAME |
 				   S3C2410_LCDCON5_PWREN),
 	},
-	[5] = { /* mini2440 + 3,5" TFT + touchscreen -- SONY X35 */
+	[5] = { /* mini2440 + 3,5" TFT + touchscreen -- SONY ACX502BMU: X35 */
 		_LCD_DECLARE(
 			7,
 			240, 1, 26, 5,		/* x timing */
 			320, 1, 5, 9,		/* y timing */
-			60),			/* refresh rate */
+			60,			/* refresh rate */
+			55, 71),		/* pyhsical size */
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 					S3C2410_LCDCON5_INVVDEN |
 					S3C2410_LCDCON5_INVVFRAME |
@@ -208,7 +216,7 @@ static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
 					S3C2410_LCDCON5_INVVCLK |
 					S3C2410_LCDCON5_HWSWP),
 	},
-	[6] = { /* LCD-W35i 3.5" display (LQ035Q1DG06)*/
+	[6] = { /* LCD-W35i 3.5" display (Sharp LQ035Q1DG06: W35i )*/
 		_LCD_DECLARE(
 			/* clock */
 			7,
@@ -217,7 +225,8 @@ static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
 			/* yres, margin_top, margin_bottom, vsync */
 			240, 4, 4, 9,
 			/* refresh rate */
-			60),
+			60,
+			72, 54),	/* pyhsical size */
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 				   S3C2410_LCDCON5_INVVDEN |
 				   S3C2410_LCDCON5_INVVFRAME |
