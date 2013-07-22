@@ -1063,6 +1063,7 @@ static irqreturn_t dm9000_interrupt(int irq, void *dev_id)
 	int int_status;
 	unsigned long flags;
 	u8 reg_save;
+	irqreturn_t ret = IRQ_NONE;
 
 	dm9000_dbg(db, 3, "entering %s\n", __func__);
 
@@ -1085,17 +1086,22 @@ static irqreturn_t dm9000_interrupt(int irq, void *dev_id)
 		dev_dbg(db->dev, "interrupt status %02x\n", int_status);
 
 	/* Received the coming packet */
-	if (int_status & ISR_PRS)
+	if (int_status & ISR_PRS) {
 		dm9000_rx(dev);
+		ret = IRQ_HANDLED;
+	}
 
 	/* Trnasmit Interrupt check */
-	if (int_status & ISR_PTS)
+	if (int_status & ISR_PTS) {
 		dm9000_tx_done(dev, db);
+		ret = IRQ_HANDLED;
+	}
 
 	if (db->type != TYPE_DM9000E) {
 		if (int_status & ISR_LNKCHNG) {
 			/* fire a link-change request */
 			schedule_delayed_work(&db->phy_poll, 1);
+			ret = IRQ_HANDLED;
 		}
 	}
 
@@ -1107,7 +1113,7 @@ static irqreturn_t dm9000_interrupt(int irq, void *dev_id)
 
 	spin_unlock_irqrestore(&db->lock, flags);
 
-	return IRQ_HANDLED;
+	return ret;
 }
 
 static irqreturn_t dm9000_wol_interrupt(int irq, void *dev_id)
