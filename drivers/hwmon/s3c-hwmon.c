@@ -178,8 +178,10 @@ static ssize_t s3c_hwmon_ch_show(struct device *dev,
 	if (ret < 0)
 		return ret;
 
-	ret *= cfg->mult;
-	ret = DIV_ROUND_CLOSEST(ret, cfg->div);
+	if (ret != 0) {
+		ret *= cfg->mult;
+		ret = DIV_ROUND_CLOSEST(ret, cfg->div);
+	}
 
 	return snprintf(buf, PAGE_SIZE, "%d\n", ret);
 }
