@@ -169,8 +169,7 @@ static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 				   S3C2410_LCDCON5_HWSWP),
 	},
-	/* mini2440 + 3.5" TFT (LCD-W35i, LQ035Q1DG06 type) + touchscreen*/
-	[3] = {
+	[6] = { /* LCD-W35i 3.5" display (LQ035Q1DG06)*/
 		_LCD_DECLARE(
 			/* clock */
 			7,
