@@ -136,7 +136,10 @@ static int s3c_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	tcmp = __raw_readl(S3C2410_TCMPB(s3c->pwm_id));
 	tcnt = __raw_readl(S3C2410_TCNTB(s3c->pwm_id));
 
-	period = NS_IN_HZ / period_ns;
+	if (period_ns)
+		period = NS_IN_HZ / period_ns;
+	else
+		period = 0;
 
 	pwm_dbg(s3c, "duty_ns=%d, period_ns=%d (%lu)\n",
 		duty_ns, period_ns, period);
