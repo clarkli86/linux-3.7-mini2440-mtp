@@ -538,6 +538,12 @@ static struct platform_device uda1340_codec = {
 		.id = -1,
 };
 
+static struct s3c2410_ts_mach_info mini2440_ts_cfg __initdata = {
+	.delay = 10000,
+	.presc = 0xff, /* slow as we can go */
+	.oversampling_shift = 0,
+};
+
 static struct platform_device *mini2440_devices[] __initdata = {
 	&s3c_device_ohci,
 	&s3c_device_wdt,
@@ -556,6 +562,7 @@ static struct platform_device *mini2440_devices[] __initdata = {
 	&uda1340_codec,
 	&mini2440_audio,
 	&samsung_asoc_dma,
+	&s3c_device_adc,
 };
 
 static void __init mini2440_map_io(void)
@@ -613,12 +620,12 @@ static void __init mini2440_parse_features(
 		switch (f) {
 		case '0'...'9':	/* tft screen */
 			if (features->done & FEATURE_SCREEN) {
-				printk(KERN_INFO "MINI2440: '%c' ignored, "
+				pr_info("MINI2440: '%c' ignored, "
 					"screen type already set\n", f);
 			} else {
 				int li = f - '0';
 				if (li >= ARRAY_SIZE(mini2440_lcd_cfg))
-					printk(KERN_INFO "MINI2440: "
+					pr_info("MINI2440: "
 						"'%c' out of range LCD mode\n", f);
 				else {
 					features->optional[features->count++] =
@@ -630,7 +637,7 @@ static void __init mini2440_parse_features(
 			break;
 		case 'b':
 			if (features->done & FEATURE_BACKLIGHT)
-				printk(KERN_INFO "MINI2440: '%c' ignored, "
+				pr_info("MINI2440: '%c' ignored, "
 					"backlight already set\n", f);
 			else {
 				features->optional[features->count++] =
@@ -639,12 +646,17 @@ static void __init mini2440_parse_features(
 			features->done |= FEATURE_BACKLIGHT;
 			break;
 		case 't':
-			printk(KERN_INFO "MINI2440: '%c' ignored, "
-				"touchscreen not compiled in\n", f);
+			if (features->done & FEATURE_TOUCH)
+				pr_info("MINI2440: '%c' ignored, "
+					"touchscreen already set\n", f);
+			else
+				features->optional[features->count++] =
+						&s3c_device_ts;
+			features->done |= FEATURE_TOUCH;
 			break;
 		case 'c':
 			if (features->done & FEATURE_CAMERA)
-				printk(KERN_INFO "MINI2440: '%c' ignored, "
+				pr_info("MINI2440: '%c' ignored, "
 					"camera already registered\n", f);
 			else
 				features->optional[features->count++] =
@@ -660,7 +672,7 @@ static void __init mini2440_init(void)
 	struct mini2440_features_t features = { 0 };
 	int i;
 
-	printk(KERN_INFO "MINI2440: Option string mini2440=%s\n",
+	pr_info("MINI2440: Option string mini2440=%s\n",
 			mini2440_features_str);
 
 	/* Parse the feature string */
@@ -689,17 +701,17 @@ static void __init mini2440_init(void)
 		mini2440_fb_info.displays =
 			&mini2440_lcd_cfg[features.lcd_index];
 
-		printk(KERN_INFO "MINI2440: LCD");
+		pr_info("MINI2440: LCD");
 		for (li = 0; li < ARRAY_SIZE(mini2440_lcd_cfg); li++)
 			if (li == features.lcd_index)
-				printk(" [%d:%dx%d]", li,
+				pr_info(" [%d:%dx%d]", li,
 					mini2440_lcd_cfg[li].width,
 					mini2440_lcd_cfg[li].height);
 			else
-				printk(" %d:%dx%d", li,
+				pr_info(" %d:%dx%d", li,
 					mini2440_lcd_cfg[li].width,
 					mini2440_lcd_cfg[li].height);
-		printk("\n");
+		pr_info("\n");
 		s3c24xx_fb_set_platdata(&mini2440_fb_info);
 	}
 
@@ -707,6 +719,7 @@ static void __init mini2440_init(void)
 	s3c24xx_mci_set_platdata(&mini2440_mmc_cfg);
 	s3c_nand_set_platdata(&mini2440_nand_info);
 	s3c_i2c0_set_platdata(NULL);
+	s3c24xx_ts_set_platdata(&mini2440_ts_cfg);
 
 	i2c_register_board_info(0, mini2440_i2c_devs,
 				ARRAY_SIZE(mini2440_i2c_devs));
