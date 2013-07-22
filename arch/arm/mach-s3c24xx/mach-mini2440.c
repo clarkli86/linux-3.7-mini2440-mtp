@@ -234,6 +234,20 @@ static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
 				   S3C2410_LCDCON5_INVVCLK |
 				   S3C2410_LCDCON5_HWSWP),
 	},
+	[7] = { /* mini2440 + 4.3" TFT + touchscreen (NEC NL4827HC19-01B: N43)
+		   mini2440 + 4.3" TFT + touchscreen (SHARP LQ043T3DX02: N43i) */
+		_LCD_DECLARE(
+			9,		/* clock rate */
+			480, 19, 38, 6,	/* xres, margin_right, margin_left, hsync */
+			272, 1, 1, 2,	/* yres, margin_top, margin_bottom, vsync */
+			60,		/* refresh rate */
+			95, 54),	/* physical size */
+		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
+					S3C2410_LCDCON5_INVVFRAME |
+					S3C2410_LCDCON5_INVVLINE |
+					S3C2410_LCDCON5_PWREN |
+					S3C2410_LCDCON5_HWSWP),
+	},
 };
 
 /* todo - put into gpio header */
