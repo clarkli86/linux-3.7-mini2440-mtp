@@ -47,7 +47,7 @@
 #ifdef CONFIG_FB_S3C2410_DEBUG
 static int debug	= 1;
 #else
-static int debug;
+static  const int debug	= 0;
 #endif
 
 #define dprintk(msg...) \
@@ -588,6 +588,7 @@ static int s3c2410fb_blank(int blank_mode, struct fb_info *info)
 	return 0;
 }
 
+#ifdef CONFIG_FB_S3C2410_DEBUG
 static int s3c2410fb_debug_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -617,6 +618,7 @@ static int s3c2410fb_debug_store(struct device *dev,
 }
 
 static DEVICE_ATTR(debug, 0666, s3c2410fb_debug_show, s3c2410fb_debug_store);
+#endif
 
 static struct fb_ops s3c2410fb_ops = {
 	.owner		= THIS_MODULE,
@@ -981,11 +983,12 @@ static int __devinit s3c24xxfb_probe(struct platform_device *pdev,
 		goto free_cpufreq;
 	}
 
+#ifdef CONFIG_FB_S3C2410_DEBUG
 	/* create device files */
 	ret = device_create_file(&pdev->dev, &dev_attr_debug);
 	if (ret)
 		dev_err(&pdev->dev, "failed to add debug attribute\n");
-
+#endif
 	dev_info(&pdev->dev, "fb%d: %s frame buffer device\n",
 		fbinfo->node, fbinfo->fix.id);
 
@@ -1050,8 +1053,9 @@ static int __devexit s3c2410fb_remove(struct platform_device *pdev)
 	iounmap(info->io);
 
 	release_mem_region(info->mem->start, resource_size(info->mem));
+#ifdef CONFIG_FB_S3C2410_DEBUG
 	device_remove_file(&pdev->dev, &dev_attr_debug);
-
+#endif
 	platform_set_drvdata(pdev, NULL);
 	framebuffer_release(fbinfo);
 
