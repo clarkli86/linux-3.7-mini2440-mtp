@@ -1059,6 +1059,10 @@ static int s3c2410_udc_ep_enable(struct usb_ep *_ep,
 
 	ep = to_s3c2410_ep(_ep);
 
+//    printk("_ep = %x, desc = %x, _ep->name = %x, ep0name = %x, desc->bDescriptorType = %d\n",
+//        _ep, desc, _ep->name, ep0name, desc->bDescriptorType);
+    printk("_ep = %x, desc = %x, _ep->name = %x, ep0name = %x \n",
+        _ep, desc, _ep->name, ep0name);
 	if (!_ep || !desc
 			|| _ep->name == ep0name
 			|| desc->bDescriptorType != USB_DT_ENDPOINT)
@@ -1471,6 +1475,7 @@ static int s3c2410_udc_set_pullup(struct s3c2410_udc *udc, int is_on)
 	if (udc_info && (udc_info->udc_command ||
 		gpio_is_valid(udc_info->pullup_pin))) {
 
+        printk(KERN_ERR "is_on = %d\n", is_on);
 		if (is_on)
 			s3c2410_udc_enable(udc);
 		else {
@@ -1505,7 +1510,8 @@ static int s3c2410_udc_pullup(struct usb_gadget *gadget, int is_on)
 
 	dprintk(DEBUG_NORMAL, "%s()\n", __func__);
 
-	s3c2410_udc_set_pullup(udc, is_on ? 0 : 1);
+	//s3c2410_udc_set_pullup(udc, is_on ? 0 : 1);
+	s3c2410_udc_set_pullup(udc, is_on ? 1 : 0);
 	return 0;
 }
 

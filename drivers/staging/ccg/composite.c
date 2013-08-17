@@ -432,6 +432,7 @@ static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 
 	}
 
+    printk(KERN_ERR "speed = %d\n", speed);
 	/* This is a lookup by config *INDEX* */
 	w_value &= 0xff;
 	list_for_each_entry(c, &cdev->configs, list) {
@@ -450,6 +451,7 @@ static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 				continue;
 		}
 
+        printk(KERN_ERR "cdev->configs->speed = %d\n", speed);
 		if (w_value == 0)
 			return config_buf(c, speed, cdev->req->buf, type);
 		w_value--;

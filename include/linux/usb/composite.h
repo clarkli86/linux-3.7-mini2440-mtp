@@ -166,6 +166,21 @@ int usb_interface_id(struct usb_configuration *, struct usb_function *);
 int config_ep_by_speed(struct usb_gadget *g, struct usb_function *f,
 			struct usb_ep *_ep);
 
+/**
+ *  * ep_choose - select descriptor endpoint at current device speed
+ *   * @g: gadget, connected and running at some speed
+ *    * @hs: descriptor to use for high speed operation
+ *     * @fs: descriptor to use for full or low speed operation
+ *      */
+static inline struct usb_endpoint_descriptor *
+ep_choose(struct usb_gadget *g, struct usb_endpoint_descriptor *hs,
+struct usb_endpoint_descriptor *fs)
+{
+    if (gadget_is_dualspeed(g) && g->speed == USB_SPEED_HIGH)
+        return hs;
+    return fs;
+}
+
 #define	MAX_CONFIG_INTERFACES		16	/* arbitrary; max 255 */
 
 /**
@@ -311,7 +326,8 @@ struct usb_composite_driver {
 	struct usb_gadget_driver		gadget_driver;
 };
 
-extern int usb_composite_probe(struct usb_composite_driver *driver);
+//extern int usb_composite_probe(struct usb_composite_driver *driver);
+extern int usb_composite_probe(struct usb_composite_driver *driver, int (*bind)(struct usb_composite_dev *cdev));
 extern void usb_composite_unregister(struct usb_composite_driver *driver);
 extern void usb_composite_setup_continue(struct usb_composite_dev *cdev);
 

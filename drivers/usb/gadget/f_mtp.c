@@ -454,7 +454,7 @@ static int mtp_create_bulk_endpoints(struct mtp_dev *dev,
 	return 0;
 
 fail:
-	printk(KERN_ERR "mtp_bind() could not allocate requests\n");
+	//printk(KERN_ERR "mtp_bind() could not allocate requests\n");
 	return -1;
 }
 
@@ -474,8 +474,10 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 
 	/* we will block until we're online */
 	DBG(cdev, "mtp_read: waiting for online state\n");
+    printk(KERN_ERR "before device state\n");
 	ret = wait_event_interruptible(dev->read_wq,
 		dev->state != STATE_OFFLINE);
+    printk(KERN_ERR "after device state\n");
 	if (ret < 0) {
 		r = ret;
 		goto done;
@@ -949,6 +951,7 @@ static int mtp_open(struct inode *ip, struct file *fp)
 		return -EBUSY;
 
 	/* clear any error condition */
+    printk(KERN_ERR "_mtp_dev->state = %d\n", _mtp_dev->state);
 	if (_mtp_dev->state != STATE_OFFLINE)
 		_mtp_dev->state = STATE_READY;
 
@@ -980,7 +983,7 @@ static struct miscdevice mtp_device = {
 	.fops = &mtp_fops,
 };
 
-static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
+int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 				const struct usb_ctrlrequest *ctrl)
 {
 	struct mtp_dev *dev = _mtp_dev;
@@ -994,6 +997,11 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 			"%02x.%02x v%04x i%04x l%u\n",
 			ctrl->bRequestType, ctrl->bRequest,
 			w_value, w_index, w_length);
+	/*printk(KERN_ERR "mtp_ctrlrequest "
+			"%02x.%02x v%04x i%04x l%u\n",
+			ctrl->bRequestType, ctrl->bRequest,
+			w_value, w_index, w_length);
+            */
 
 	/* Handle MTP OS string */
 	if (ctrl->bRequestType ==
@@ -1001,6 +1009,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 			&& ctrl->bRequest == USB_REQ_GET_DESCRIPTOR
 			&& (w_value >> 8) == USB_DT_STRING
 			&& (w_value & 0xFF) == MTP_OS_STRING_ID) {
+            //printk(KERN_ERR "Get descriptor\n");
 		value = (w_length < sizeof(mtp_os_string)
 				? w_length : sizeof(mtp_os_string));
 		memcpy(cdev->req->buf, mtp_os_string, value);
@@ -1132,7 +1141,18 @@ static int mtp_function_set_alt(struct usb_function *f,
 	int ret;
 
 	DBG(cdev, "mtp_function_set_alt intf: %d alt: %d\n", intf, alt);
+/*
+    dev->ep_in->desc = ep_choose(cdev->gadget,
+				&mtp_highspeed_in_desc,
+				&mtp_fullspeed_in_desc);
+*/
+	ret = config_ep_by_speed(f->config->cdev->gadget, f, dev->ep_in);
+    if(ret)
+    {
+        printk(KERN_ERR "config_ep_byspeed failed for ep_in\n");
+    }
 	ret = usb_ep_enable(dev->ep_in);
+    printk(KERN_ERR "ep_in ret = %d\n", ret);
 /*
 			ep_choose(cdev->gadget,
 				&mtp_highspeed_in_desc,
@@ -1140,7 +1160,13 @@ static int mtp_function_set_alt(struct usb_function *f,
 */
 	if (ret)
 		return ret;
+	ret = config_ep_by_speed(f->config->cdev->gadget, f, dev->ep_out);
+    if(ret)
+    {
+        printk(KERN_ERR "config_ep_byspeed failed for ep_out\n");
+    }
 	ret = usb_ep_enable(dev->ep_out);
+    printk(KERN_ERR "ep_out ret = %d\n", ret);
 /*
 			ep_choose(cdev->gadget,
 				&mtp_highspeed_out_desc,
@@ -1150,13 +1176,20 @@ static int mtp_function_set_alt(struct usb_function *f,
 		usb_ep_disable(dev->ep_in);
 		return ret;
 	}
+	ret = config_ep_by_speed(f->config->cdev->gadget, f, dev->ep_intr);
+    if(ret)
+    {
+        printk(KERN_ERR "config_ep_byspeed failed for ep_intr\n");
+    }
 	ret = usb_ep_enable(dev->ep_intr);// &mtp_intr_desc);
+    printk(KERN_ERR "ep_intr ret = %d\n", ret);
 	if (ret) {
 		usb_ep_disable(dev->ep_out);
 		usb_ep_disable(dev->ep_in);
 		return ret;
 	}
 	dev->state = STATE_READY;
+    printk(KERN_ERR "dev->state = %d\n", dev->state);
 
 	/* readers may be blocked waiting for us to go online */
 	wake_up(&dev->read_wq);
@@ -1168,6 +1201,7 @@ static void mtp_function_disable(struct usb_function *f)
 	struct mtp_dev	*dev = func_to_mtp(f);
 	struct usb_composite_dev	*cdev = dev->cdev;
 
+	printk(KERN_ERR "mtp_function_disable\n");
 	DBG(cdev, "mtp_function_disable\n");
 	dev->state = STATE_OFFLINE;
 	usb_ep_disable(dev->ep_in);
@@ -1185,11 +1219,12 @@ static int mtp_bind_config(struct usb_configuration *c, bool ptp_config)
 	struct mtp_dev *dev = _mtp_dev;
 	int ret = 0;
 
-	printk(KERN_INFO "mtp_bind_config\n");
+	//printk(KERN_ERR "mtp_bind_config\n");
 
 	/* allocate a string ID for our interface */
 	if (mtp_string_defs[INTERFACE_STRING_INDEX].id == 0) {
 		ret = usb_string_id(c->cdev);
+        //printk(KERN_ERR "usb_string_id() returns %d\n", ret);
 		if (ret < 0)
 			return ret;
 		mtp_string_defs[INTERFACE_STRING_INDEX].id = ret;
@@ -1253,7 +1288,7 @@ err2:
 err1:
 	_mtp_dev = NULL;
 	kfree(dev);
-	printk(KERN_ERR "mtp gadget driver failed to initialize\n");
+	//printk(KERN_ERR "mtp gadget driver failed to initialize\n");
 	return ret;
 }
 

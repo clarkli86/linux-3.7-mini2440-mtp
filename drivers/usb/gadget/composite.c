@@ -21,6 +21,8 @@
 #include <linux/usb/composite.h>
 #include <asm/unaligned.h>
 
+static int (*composite_gadget_bind)(struct usb_composite_dev *cdev);
+
 /*
  * The code in this file is utility code, used to build a gadget driver
  * from one or more "function" drivers, one or more "configuration"
@@ -381,6 +383,7 @@ static int config_buf(struct usb_configuration *config,
 	return len;
 }
 
+static int count_configs(struct usb_composite_dev *cdev, unsigned type);
 static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 {
 	struct usb_gadget		*gadget = cdev->gadget;
@@ -388,6 +391,8 @@ static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 	u8				type = w_value >> 8;
 	enum usb_device_speed		speed = USB_SPEED_UNKNOWN;
 
+    //printk(KERN_ERR "gadget->speed = %d, gadget->max_speed= %d\n", gadget->speed, gadget->max_speed);
+    //printk(KERN_ERR "type = %d\n", type);
 	if (gadget->speed == USB_SPEED_SUPER)
 		speed = gadget->speed;
 	else if (gadget_is_dualspeed(gadget)) {
@@ -398,8 +403,9 @@ static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 			hs = !hs;
 		if (hs)
 			speed = USB_SPEED_HIGH;
-
 	}
+    //printk(KERN_ERR "speed = %d\n", speed);
+    //printk("config_desc::count_configs(cdev, USB_DT_DEVICE) = %d\n", count_configs(cdev, USB_DT_DEVICE));
 
 	/* This is a lookup by config *INDEX* */
 	w_value &= 0xff;
@@ -419,6 +425,7 @@ static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 				continue;
 		}
 
+        //printk(KERN_ERR "cdev->configs->speed = %d\n", speed);
 		if (w_value == 0)
 			return config_buf(c, speed, cdev->req->buf, type);
 		w_value--;
@@ -549,6 +556,7 @@ static void reset_config(struct usb_composite_dev *cdev)
 
 	DBG(cdev, "reset config\n");
 
+    printk(KERN_ERR "reset config\n");
 	list_for_each_entry(f, &cdev->config->functions, list) {
 		if (f->disable)
 			f->disable(f);
@@ -567,6 +575,7 @@ static int set_config(struct usb_composite_dev *cdev,
 	unsigned		power = gadget_is_otg(gadget) ? 8 : 100;
 	int			tmp;
 
+    printk(KERN_ERR "set_config number = %d\n", number);
 	if (number) {
 		list_for_each_entry(c, &cdev->configs, list) {
 			if (c->bConfigurationValue == number) {
@@ -641,6 +650,7 @@ static int set_config(struct usb_composite_dev *cdev,
 			DBG(cdev, "interface %d (%s/%p) alt 0 --> %d\n",
 					tmp, f->name, f, result);
 
+            printk(KERN_ERR "after set_alt()\n");
 			reset_config(cdev);
 			goto done;
 		}
@@ -800,6 +810,7 @@ void usb_remove_config(struct usb_composite_dev *cdev,
 
 	spin_lock_irqsave(&cdev->lock, flags);
 
+    printk(KERN_ERR "usb_remove_config\n");
 	if (cdev->config == config)
 		reset_config(cdev);
 
@@ -1047,6 +1058,8 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	struct usb_function		*f = NULL;
 	u8				endp;
 
+    //TODO
+    //printk(KERN_ERR "composite_setup\n");
 	/* partial re-init of the response message; the function or the
 	 * gadget might need to intercept e.g. a control-OUT completion
 	 * when we delegate to it.
@@ -1060,6 +1073,7 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 
 	/* we handle all standard USB descriptors */
 	case USB_REQ_GET_DESCRIPTOR:
+        //printk(KERN_ERR "composite_setup, USB_REQ_GET_DESCRIPTOR, w_value >> 8 = %d\n", w_value >> 8);
 		if (ctrl->bRequestType != USB_DIR_IN)
 			goto unknown;
 		switch (w_value >> 8) {
@@ -1077,7 +1091,9 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 					cdev->desc.bcdUSB = cpu_to_le16(0x0210);
 				}
 			}
+            //printk("count_configs(cdev, USB_DT_DEVICE) = %d\n", count_configs(cdev, USB_DT_DEVICE));
 
+            //printk("w_length = %d, cdev->desc = %d\n", w_length, (u16) sizeof cdev->desc);
 			value = min(w_length, (u16) sizeof cdev->desc);
 			memcpy(req->buf, &cdev->desc, value);
 			break;
@@ -1285,6 +1301,7 @@ unknown:
 		req->zero = value < w_length;
 		value = usb_ep_queue(gadget->ep0, req, GFP_ATOMIC);
 		if (value < 0) {
+            //printk("ep_queue --> %d\n", value);
 			DBG(cdev, "ep_queue --> %d\n", value);
 			req->status = 0;
 			composite_setup_complete(gadget->ep0, req);
@@ -1308,6 +1325,7 @@ static void composite_disconnect(struct usb_gadget *gadget)
 	/* REVISIT:  should we have config and device level
 	 * disconnect callbacks?
 	 */
+    printk(KERN_ERR "composite_disconnect");
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (cdev->config)
 		reset_config(cdev);
@@ -1450,7 +1468,8 @@ static int composite_bind(struct usb_gadget *gadget,
 	 * serial number), register function drivers, potentially update
 	 * power state and consumption, etc
 	 */
-	status = composite->bind(cdev);
+	//status = composite->bind(cdev);
+    status = composite_gadget_bind(cdev);
 	if (status < 0)
 		goto fail;
 
@@ -1530,7 +1549,7 @@ composite_resume(struct usb_gadget *gadget)
 /*-------------------------------------------------------------------------*/
 
 static struct usb_gadget_driver composite_driver_template = {
-	//.bind		= composite_bind,
+	.bind		= composite_bind,
 	.unbind		= composite_unbind,
 
 	.setup		= composite_setup,
@@ -1563,15 +1582,20 @@ static struct usb_gadget_driver composite_driver_template = {
  * while it was binding.  That would usually be done in order to wait for
  * some userspace participation.
  */
-int usb_composite_probe(struct usb_composite_driver *driver)
+int usb_composite_probe(struct usb_composite_driver *driver, int (*bind)(struct usb_composite_dev *cdev))
 {
 	struct usb_gadget_driver *gadget_driver;
 
+    //printk(KERN_ERR "usb_composite_probe\n");
 	if (!driver || !driver->dev || !driver->bind)
+    {
 		return -EINVAL;
+    }
 
 	if (!driver->name)
 		driver->name = "composite";
+
+    composite_gadget_bind = bind;
 
 	driver->gadget_driver = composite_driver_template;
 	gadget_driver = &driver->gadget_driver;
@@ -1580,7 +1604,10 @@ int usb_composite_probe(struct usb_composite_driver *driver)
 	gadget_driver->driver.name = driver->name;
 	gadget_driver->max_speed = driver->max_speed;
 
-	return usb_gadget_probe_driver(gadget_driver);
+    //printk(KERN_ERR "before usb_gadget_probe_driver\n");
+	int ret = usb_gadget_probe_driver(gadget_driver);
+    //printk(KERN_ERR "after usb_gadget_probe_driver ret = %d\n", ret);
+    return ret;
 }
 EXPORT_SYMBOL_GPL(usb_composite_probe);
 

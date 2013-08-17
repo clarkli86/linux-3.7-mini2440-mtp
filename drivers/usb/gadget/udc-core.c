@@ -316,8 +316,12 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver)
 	struct usb_udc		*udc = NULL;
 	int			ret;
 
+    printk(KERN_ERR "usb_gadget_probe_driver\n");
 	if (!driver || !driver->bind || !driver->setup)
+    {
+        printk(KERN_ERR "usb_gadget_probe_driver::invalid argument\n");
 		return -EINVAL;
+    }
 
 	mutex_lock(&udc_lock);
 	list_for_each_entry(udc, &udc_list, list) {

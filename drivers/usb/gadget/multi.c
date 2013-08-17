@@ -41,7 +41,7 @@ MODULE_LICENSE("GPL");
  * a "gcc --combine ... part1.c part2.c part3.c ... " build would.
  */
 #include "f_mass_storage.c"
-
+#include "f_mtp.c"
 #include "u_serial.c"
 #include "f_acm.c"
 
@@ -52,7 +52,6 @@ MODULE_LICENSE("GPL");
 #  include "rndis.c"
 #endif
 #include "u_ether.c"
-
 USB_GADGET_COMPOSITE_OPTIONS();
 
 /***************************** Device Descriptor ****************************/
@@ -78,9 +77,9 @@ static struct usb_device_descriptor device_desc = {
 
 	.bcdUSB =		cpu_to_le16(0x0200),
 
-	.bDeviceClass =		USB_CLASS_MISC /* 0xEF */,
-	.bDeviceSubClass =	2,
-	.bDeviceProtocol =	1,
+	.bDeviceClass =		0 /* 0xEF */,
+	.bDeviceSubClass =	0,
+	.bDeviceProtocol =	0,
 
 	/* Vendor and product id can be overridden by module parameters.  */
 	.idVendor =		cpu_to_le16(MULTI_VENDOR_NUM),
@@ -137,7 +136,6 @@ static struct fsg_common fsg_common;
 
 static u8 hostaddr[ETH_ALEN];
 
-
 /********** RNDIS **********/
 
 #ifdef USB_ETH_RNDIS
@@ -188,7 +186,6 @@ static int rndis_config_register(struct usb_composite_dev *cdev)
 
 #endif
 
-
 /********** CDC ECM **********/
 
 #ifdef CONFIG_USB_G_MULTI_CDC
@@ -201,7 +198,7 @@ static __init int cdc_do_config(struct usb_configuration *c)
 		c->descriptors = otg_desc;
 		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 	}
-
+#if 0
 	ret = ecm_bind_config(c, hostaddr);
 	if (ret < 0)
 		return ret;
@@ -209,10 +206,15 @@ static __init int cdc_do_config(struct usb_configuration *c)
 	ret = acm_bind_config(c, 0);
 	if (ret < 0)
 		return ret;
-
+#endif
+/*
 	ret = fsg_bind_config(c->cdev, c, &fsg_common);
 	if (ret < 0)
 		return ret;
+*/
+    ret = mtp_bind_config(c, false);
+    if (ret < 0)
+        return ret;
 
 	return 0;
 }
@@ -240,7 +242,6 @@ static int cdc_config_register(struct usb_composite_dev *cdev)
 #endif
 
 
-
 /****************************** Gadget Bind ******************************/
 
 
@@ -248,7 +249,7 @@ static int __ref multi_bind(struct usb_composite_dev *cdev)
 {
 	struct usb_gadget *gadget = cdev->gadget;
 	int status;
-
+#if 0
 	if (!can_support_ecm(cdev->gadget)) {
 		dev_err(&gadget->dev, "controller '%s' not usable\n",
 		        gadget->name);
@@ -264,7 +265,12 @@ static int __ref multi_bind(struct usb_composite_dev *cdev)
 	status = gserial_setup(cdev->gadget, 1);
 	if (status < 0)
 		goto fail0;
+#endif
 
+    status = mtp_setup();
+    if (status < 0)
+        goto fail1;
+#if 0
 	/* set up mass storage function */
 	{
 		void *retp;
@@ -274,7 +280,7 @@ static int __ref multi_bind(struct usb_composite_dev *cdev)
 			goto fail1;
 		}
 	}
-
+#endif
 	/* allocate string IDs */
 	status = usb_string_ids_tab(cdev, strings_dev);
 	if (unlikely(status < 0))
@@ -290,7 +296,6 @@ static int __ref multi_bind(struct usb_composite_dev *cdev)
 	if (unlikely(status < 0))
 		goto fail2;
 	usb_composite_overwrite_options(cdev, &coverwrite);
-
 	/* we're done */
 	dev_info(&gadget->dev, DRIVER_DESC "\n");
 	fsg_common_put(&fsg_common);
@@ -301,21 +306,21 @@ static int __ref multi_bind(struct usb_composite_dev *cdev)
 fail2:
 	fsg_common_put(&fsg_common);
 fail1:
-	gserial_cleanup();
+	//gserial_cleanup();
+    mtp_cleanup();
 fail0:
-	gether_cleanup();
+	//gether_cleanup();
 	return status;
 }
 
 static int __exit multi_unbind(struct usb_composite_dev *cdev)
 {
-	gserial_cleanup();
-	gether_cleanup();
+    mtp_cleanup();
+//	gserial_cleanup();
+//	gether_cleanup();
 	return 0;
 }
 
-
-/****************************** Some noise ******************************/
 
 
 static __refdata struct usb_composite_driver multi_driver = {
