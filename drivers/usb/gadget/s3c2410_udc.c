@@ -1059,10 +1059,6 @@ static int s3c2410_udc_ep_enable(struct usb_ep *_ep,
 
 	ep = to_s3c2410_ep(_ep);
 
-//    printk("_ep = %x, desc = %x, _ep->name = %x, ep0name = %x, desc->bDescriptorType = %d\n",
-//        _ep, desc, _ep->name, ep0name, desc->bDescriptorType);
-    printk("_ep = %x, desc = %x, _ep->name = %x, ep0name = %x \n",
-        _ep, desc, _ep->name, ep0name);
 	if (!_ep || !desc
 			|| _ep->name == ep0name
 			|| desc->bDescriptorType != USB_DT_ENDPOINT)

@@ -556,7 +556,6 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 	mutex_lock(&dev->mutex);
 
 	sscanf(buff, "%d", &enabled);
-    //printk(KERN_ERR "enabled = %d, dev->enabled = %d\n", enabled, dev->enabled);
 	if (enabled && !dev->enabled) {
 		/* update values in composite driver's copy of device descriptor */
 		cdev->desc.idVendor = device_desc.idVendor;
@@ -784,7 +783,6 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 	int value = -EOPNOTSUPP;
 	unsigned long flags;
 
-    //printk(KERN_ERR "android_setup\n");
 	req->zero = 0;
 	req->complete = composite_setup_complete;
 	req->length = 0;
@@ -805,10 +803,8 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 	if (value < 0)
 		value = acc_ctrlrequest(cdev, c);
 */
-    //printk(KERN_ERR "value = %d\n", value);
 	if (value < 0)
 		value = composite_setup(gadget, c);
-    //printk(KERN_ERR "value = %d\n", value);
 
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (!dev->connected) {
@@ -839,7 +835,6 @@ static void android_disconnect(struct usb_gadget *gadget)
 */
 	spin_lock_irqsave(&cdev->lock, flags);
 	dev->connected = 0;
-    //printk(KERN_ERR "android_disconnect\n");
 	schedule_work(&dev->work);
 	spin_unlock_irqrestore(&cdev->lock, flags);
 }
@@ -874,11 +869,9 @@ static int __init init(void)
 	int err;
 
 	android_class = class_create(THIS_MODULE, "android_usb");
-    //printk(KERN_ERR "class_create\n");
 	if (IS_ERR(android_class))
 		return PTR_ERR(android_class);
 
-    //printk(KERN_ERR "kzalloc\n");
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
@@ -887,10 +880,8 @@ static int __init init(void)
 	dev->functions = supported_functions;
 	INIT_LIST_HEAD(&dev->enabled_functions);
 	INIT_WORK(&dev->work, android_work);
-    //printk(KERN_ERR "mutex_init\n");
 	mutex_init(&dev->mutex);
 
-    //printk(KERN_ERR "android_create_device\n");
 	err = android_create_device(dev);
 	if (err) {
 		class_destroy(android_class);
